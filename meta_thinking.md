@@ -63,13 +63,17 @@ This file tracks the core context, key decisions, architectural trade-offs, and 
 
 ---
 
-## 4. Documentation and Tone Standards
+## 4. Documentation, Logging, and Testing Protocols
 
 - **Writing Guidelines**:
   - Zero em dashes (`—`) or en dashes (`–`).
   - Plain, direct, technical language.
   - No formulaic AI buzzwords or filler adjectives.
   - Fact-checked technical details regarding Linux networking and Electron security settings.
+- **Development Process Logging**:
+  - For each phase or major commit, create `document/development/phase_<number>/implementation_guide.md` documenting step-by-step code changes, architecture decisions, component wiring, and visual UI/architecture screenshots.
+- **Testing Process Logging**:
+  - For each phase or major commit, create `document/testing/phase_<number>/testing_doc.md` logging unit tests, security fuzzing outputs, test commands, pass/fail status, and test execution screenshots.
 
 ---
 
@@ -81,24 +85,34 @@ This file tracks the core context, key decisions, architectural trade-offs, and 
    - Sandbox manager with immutable system PID protection.
    - Scenario simulation injector for rich testing.
    - FastAPI server with REST endpoints and 10Hz WebSocket streaming.
+   - Dev Log: `document/development/phase_1/implementation_guide.md`
+   - Test Log: `document/testing/phase_1/testing_doc.md`
 
 2. **Phase 2: Automated Security and Reliability Test Suite**
    - Backend security test suite (`tests/test_security.py`): PID fuzzing, protected PID isolation, secret scrubbing, loopback binding.
    - Electron security audit suite (`tests/test_electron_security.test.js`): webPreferences, CSP compliance, IPC boundaries.
+   - Dev Log: `document/development/phase_2/implementation_guide.md`
+   - Test Log: `document/testing/phase_2/testing_doc.md`
 
 3. **Phase 3: Electron Desktop Shell and IPC Layer**
    - `electron/main.cjs`: Native frameless window, system tray menu, notification dispatcher, background daemon supervisor.
    - `electron/preload.cjs`: Hardened context bridge with typed IPC APIs.
+   - Dev Log: `document/development/phase_3/implementation_guide.md`
+   - Test Log: `document/testing/phase_3/testing_doc.md`
 
 4. **Phase 4: Frontend Desktop User Interface and Visualizations**
    - Base styling (`src/index.css`) with glassmorphism dark theme.
    - UI components (`TitleBar`, `ProcessSocketTree`, `DomainBreakdown`, `PacketHeatmap`, `NetworkWaterfall`, `ProcessDetailModal`, `GlobalControls`).
    - React app assembly and WebSocket client integration.
+   - Dev Log: `document/development/phase_4/implementation_guide.md`
+   - Test Log: `document/testing/phase_4/testing_doc.md`
 
 5. **Phase 5: End-to-End Integration, Validation, and Packaging**
    - Live end-to-end testing across Live Kernel and Simulation modes.
    - Verification of kill switches, bandwidth heatmaps, and background telemetry alerts.
    - Final documentation synchronization and walkthrough.
+   - Dev Log: `document/development/phase_5/implementation_guide.md`
+   - Test Log: `document/testing/phase_5/testing_doc.md`
 
 ---
 

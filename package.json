@@ -12,7 +12,9 @@
     "electron": "electron .",
     "test:security": ".venv/bin/pytest tests/ -v",
     "test:electron": "node tests/test_electron_security.test.cjs",
-    "test": "npm run test:security && npm run test:electron"
+    "test:ui": "node --test tests/test_frontend_ui.test.cjs",
+    "test:e2e": "node --test tests/test_e2e_scenarios.test.cjs",
+    "test": "npm run test:security && npm run test:electron && npm run test:ui && npm run test:e2e && npm run build"
   },
   "dependencies": {
     "lucide-react": "^1.16.0",

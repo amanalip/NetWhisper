@@ -75,8 +75,8 @@ class SandboxManager:
             if proc_name in PROTECTED_PROCESS_NAMES:
                 return True, f"Process '{proc_name}' is a protected system service or display manager."
 
-            # Check if the process is a kernel thread (empty command line).
-            if not p.cmdline():
+            # Check if the process is a kernel thread (empty command line and parented by kthreadd PID 2).
+            if not p.cmdline() and (p.ppid() == 2 or pid == 2):
                 return True, "Target is a protected kernel thread."
         except (psutil.NoSuchProcess, psutil.AccessDenied):
             # If the process does not exist or access is restricted, allow standard handling.

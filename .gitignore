@@ -9,6 +9,9 @@ __pycache__/
 *.pyc
 .pytest_cache/
 
+# Teamwork subagents internal artifacts
+.agents/
+
 # Logs and environment files
 *.log
 .env

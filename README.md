@@ -1,68 +1,127 @@
 # NetWhisper
-> Interactive Real-Time Privacy and Network Monitor for Desktop Apps and CLI Tools
 
-NetWhisper visualizes and inspects background network activity across running desktop applications, CLI utilities, background services, and local scripts. It maps outbound sockets to specific processes, breaks down contacted domains and telemetry endpoints, offers instant per-process kill switches and network isolation, and displays high-resolution packet volume heatmaps.
+> Real-Time Network and Privacy Monitor for Linux Desktop Apps, Browsers, and CLI Tools
+
+NetWhisper is a native Electron desktop application that inspects live outbound network sockets on your Linux system. It maps every TCP/UDP connection to the exact process that opened it, categorizes contacted domains (analytics, telemetry, trackers, CDNs), flags high-risk unencrypted or non-standard-port traffic, and gives you instant kill switches and network isolation per process.
 
 ---
 
 ## Key Features
 
-- **Real-Time Process Socket Tree**: Live hierarchical view correlating kernel sockets (TCP/UDP) to parent and child processes with CPU/memory metrics and connection states (ESTABLISHED, LISTEN, TIME_WAIT).
-- **Domain Resolution and Telemetry Breakdown**: Reverse DNS and destination categorization (Analytics/Telemetry, Cloud APIs, CDNs, Trackers, Direct IP) with privacy risk scoring.
-- **Instant Per-Process Sandboxing and Kill Switches**: One-click process termination (SIGKILL/SIGTERM), network traffic isolation, bandwidth throttling, and a global panic button.
-- **Packet Volume Heatmaps and Activity Waterfall**: Canvas-based real-time 2D activity heatmap detecting periodic beaconing and burst transfers, paired with a live socket event stream.
-- **Security-First Architecture**: Electron hardening (contextIsolation, sandbox, strict CSP), loopback-only binding (127.0.0.1), credential sanitization (redacts API keys and tokens from command lines), and immutable safeguards for critical system PIDs.
-- **Dual Engine Modes**:
-  - **Live Linux Kernel Mode**: Real-time inspection of active OS processes and `/proc/net` sockets.
-  - **Scenario Simulation Mode**: Built-in telemetry injector to explore and test network behaviors safely without requiring elevated permissions.
+- **Live Linux Socket Inspection**: Reads active host sockets directly using `psutil` and `ss` — sees Chrome, VS Code, Discord, npm, pip, and everything else your machine is talking to right now.
+- **Process Socket Tree**: Hierarchical view mapping every TCP/UDP connection to its parent process with CPU/RAM usage and connection state.
+- **Domain Breakdown**: Reverse DNS resolution and destination categorization (Analytics/Telemetry, Cloud APIs, Trackers, Unencrypted HTTP, Direct IP).
+- **Per-Process Kill and Isolate**: One-click SIGTERM/SIGKILL, traffic isolation, and a global Panic Switch that cuts all non-system processes simultaneously.
+- **Packet Heatmap and Event Waterfall**: Canvas-rendered 2D activity heatmap and live event stream showing new socket connections in real time.
+- **Dual Mode**: Switch between Live Linux Kernel inspection and Scenario Simulation (useful for developing and testing without needing root).
 
 ---
 
-## Architecture
+## Requirements
+
+- Linux (Ubuntu, Fedora, Arch, etc.)
+- Node.js v18+
+- Python 3.10+
+
+---
+
+## Quick Start (Three Steps)
+
+### Step 1: Install dependencies
+
+```bash
+# Install Node/Electron/React dependencies
+npm install
+
+# Install Python backend dependencies
+python3 -m venv .venv
+.venv/bin/pip install -r server/requirements.txt
+```
+
+### Step 2: Build the frontend
+
+```bash
+npm run build
+```
+
+### Step 3: Launch the desktop app
+
+```bash
+npm run electron
+```
+
+This opens NetWhisper as a native Electron desktop window. The Electron main process automatically starts the Python telemetry daemon in the background, waits for it to be ready, and then loads the UI — no browser involved.
+
+---
+
+## One-Command Launch (build + open)
+
+```bash
+npm start
+```
+
+This runs `npm run build` and then immediately opens the Electron desktop window.
+
+---
+
+## Scripts Reference
+
+| Command | What it does |
+| :--- | :--- |
+| `npm start` | Build frontend and launch Electron desktop app |
+| `npm run electron` | Launch Electron desktop app (requires `npm run build` first) |
+| `npm run build` | Build the React frontend into `dist/` |
+| `npm run dev` | Start the Vite dev server only (browser preview, not the desktop app) |
+| `npm test` | Run all backend security tests and Electron hardening audit |
+
+---
+
+## Project Layout
 
 ```
 NetWhisper/
-├── electron/              # Electron main process, tray menu, and IPC preload
-├── server/                # Python FastAPI real-time socket engine and privacy analyzer
+├── electron/              # Electron main process and IPC preload
+│   ├── main.cjs           # Window creation, daemon supervisor, tray, IPC handlers
+│   └── preload.cjs        # Hardened ContextBridge exposed to renderer
+├── server/                # Python FastAPI telemetry backend
+│   ├── main.py            # REST + WebSocket server on 127.0.0.1:8765
+│   ├── socket_engine.py   # Live Linux socket extraction (psutil + ss + procfs)
+│   ├── privacy_analyzer.py# Reverse DNS, telemetry signatures, secret scrubber
+│   ├── sandbox_manager.py # Process kill/isolate with system PID safeguards
+│   └── scenario_generator.py # Simulated traffic injector for dev/test mode
 ├── src/                   # React + Vite desktop UI
-├── tests/                 # Automated backend and Electron security test suite
-└── package.json           # Scripts for dev, test, and desktop bundling
+│   ├── App.jsx            # Root: WebSocket client, tab routing, action handlers
+│   ├── index.css          # Cyber dark glassmorphism design system
+│   └── components/        # TitleBar, ProcessSocketTree, DomainBreakdown,
+│                          # PacketHeatmap (Canvas), NetworkWaterfall, ProcessDetailModal
+├── tests/                 # Automated test suite
+│   ├── test_phase1_backend.py     # 7 backend unit tests
+│   ├── test_security.py           # 5 security fuzzing tests
+│   └── test_electron_security.test.cjs  # Electron hardening audit
+└── package.json
 ```
 
 ---
 
-## Quick Start
+## Security
 
-### Prerequisites
-- Node.js (v18+)
-- Python 3.10+
-
-### Setup and Run
-```bash
-# 1. Install frontend and Electron dependencies
-npm install
-
-# 2. Install backend dependencies
-pip install -r server/requirements.txt
-
-# 3. Launch NetWhisper Desktop App
-npm run dev
-```
+- Electron renderer runs with `contextIsolation: true`, `nodeIntegration: false`, `sandbox: true`
+- Backend binds to `127.0.0.1` only — not accessible from any external network
+- PID 0, PID 1, display servers, and NetWhisper itself are permanently protected from kill/isolate
+- Process command lines are scrubbed of API keys, tokens, and passwords before display
 
 ---
 
-## Security and Quality Verification
+## Run Tests
 
-Run the automated security and functionality test suite:
 ```bash
-# Run backend security fuzzing and secret redaction tests
-pytest tests/test_security.py
-
-# Run Electron security configuration audit
-node tests/test_electron_security.test.js
+npm test
 ```
+
+Expected output: 12 backend security tests + 2 Electron hardening checks, all passing.
 
 ---
 
 ## License
-Licensed under the GNU General Public License v3.0 (GPL-3.0). See [LICENSE](LICENSE) for details.
+
+GNU General Public License v3.0 (GPL-3.0)

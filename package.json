@@ -5,6 +5,7 @@
   "main": "electron/main.cjs",
   "type": "module",
   "scripts": {
+    "start": "npm run build && electron .",
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
@@ -20,7 +21,7 @@
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.3.4",
-    "electron": "^33.2.1",
+    "electron": "^33.4.11",
     "vite": "^6.0.7"
   },
   "keywords": [
@@ -31,5 +32,9 @@
     "security"
   ],
   "author": "NetWhisper Team",
-  "license": "GPL-3.0"
+  "license": "GPL-3.0",
+  "allowScripts": {
+    "electron@33.4.11": true,
+    "esbuild@0.25.12": true
+  }
 }

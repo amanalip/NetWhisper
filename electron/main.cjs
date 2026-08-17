@@ -1,231 +1,248 @@
 /**
  * Main Process for NetWhisper Electron Desktop App.
- * Handles lifecycle management, frameless window framing, system tray integration,
- * background Python daemon supervision, and security boundary enforcement.
+ * Handles: frameless window, Python daemon lifecycle, system tray, IPC, and security boundaries.
  */
 
-// Import core modules from Electron.
+// ---- Core Electron and Node.js imports ----
 const { app, BrowserWindow, ipcMain, Tray, Menu, Notification, dialog, shell, session } = require('electron');
-// Import Node.js path module for resolving directory locations.
 const path = require('path');
-// Import child_process spawn to supervise the local Python telemetry backend daemon.
-const { spawn } = require('child_process');
+const fs   = require('fs');
+const { spawn, execFile } = require('child_process');
 
-// Keep global references to prevent garbage collection.
-let mainWindow = null;
-let tray = null;
-let pythonDaemonProcess = null;
+// ---- Global state ----
+let mainWindow          = null;   // Reference to the primary BrowserWindow
+let tray                = null;   // Reference to the system tray icon
+let pythonDaemonProcess = null;   // Reference to the spawned Python telemetry process
+let daemonReady         = false;  // Tracks whether the Python HTTP server is accepting connections
 
-// Determine if application is running in development mode.
-const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
+// Root directory of the project (parent of the electron/ folder)
+const ROOT_DIR  = path.resolve(__dirname, '..');
 
-/**
- * Spawns and supervises the local Python telemetry daemon on 127.0.0.1.
- */
+// In production (packaged) electron runs the built dist/; in development it hits the Vite dev server.
+// When the user runs "electron ." directly from the repo (no NODE_ENV), treat it as production.
+const isDev = process.env.NODE_ENV === 'development';
+
+// ---- Helper: wait until the Python daemon is accepting TCP connections on 127.0.0.1:8765 ----
+function waitForDaemon(host, port, timeoutMs, callback) {
+  const net       = require('net');
+  const startTime = Date.now();
+
+  function attempt() {
+    const sock = new net.Socket();
+    sock.setTimeout(200);
+    sock.on('connect', () => {
+      sock.destroy();
+      callback(null); // success
+    });
+    sock.on('error', () => {
+      sock.destroy();
+      if (Date.now() - startTime > timeoutMs) {
+        callback(new Error('Daemon did not start in time'));
+      } else {
+        setTimeout(attempt, 250); // retry every 250ms
+      }
+    });
+    sock.on('timeout', () => {
+      sock.destroy();
+      if (Date.now() - startTime > timeoutMs) {
+        callback(new Error('Daemon did not start in time'));
+      } else {
+        setTimeout(attempt, 250);
+      }
+    });
+    sock.connect(port, host);
+  }
+  attempt();
+}
+
+// ---- Start the background Python telemetry engine ----
 function startPythonDaemon() {
-  console.log('[MAIN] Starting NetWhisper local Python telemetry engine...');
-  // Resolve path to the virtualenv Python binary.
-  const rootDir = path.resolve(__dirname, '..');
-  const venvPython = path.join(rootDir, '.venv', 'bin', 'python3');
-  const serverScript = path.join(rootDir, 'server', 'main.py');
+  console.log('[MAIN] Starting Python telemetry engine...');
 
-  // Check if virtual environment python exists, otherwise fallback to system python.
-  const pythonBin = require('fs').existsSync(venvPython) ? venvPython : 'python3';
+  // Prefer the project virtualenv Python; fall back to the system python3.
+  const venvPython = path.join(ROOT_DIR, '.venv', 'bin', 'python3');
+  const pythonBin  = fs.existsSync(venvPython) ? venvPython : 'python3';
+  const serverScript = path.join(ROOT_DIR, 'server', 'main.py');
 
-  // Spawn Python daemon as a detached child process with unbuffered output.
+  console.log('[MAIN] Python binary:', pythonBin);
+  console.log('[MAIN] Server script:', serverScript);
+
+  // Spawn Python as a child of this process.
+  // cwd = ROOT_DIR so that relative imports inside server/ resolve correctly.
   pythonDaemonProcess = spawn(pythonBin, [serverScript], {
-    cwd: path.join(rootDir, 'server'),
-    env: { ...process.env, PYTHONUNBUFFERED: '1', PORT: '8765' }
+    cwd: ROOT_DIR,
+    env: { ...process.env, PYTHONUNBUFFERED: '1', PORT: '8765' },
+    stdio: ['ignore', 'pipe', 'pipe']
   });
 
-  // Log standard output from daemon.
   pythonDaemonProcess.stdout.on('data', (data) => {
-    console.log(`[PYTHON ENGINE] ${data.toString().trim()}`);
+    console.log('[PYTHON]', data.toString().trim());
   });
-
-  // Log error output from daemon.
   pythonDaemonProcess.stderr.on('data', (data) => {
-    console.error(`[PYTHON ERROR] ${data.toString().trim()}`);
+    console.log('[PYTHON ERR]', data.toString().trim());
   });
-
-  // Handle unexpected daemon exit.
   pythonDaemonProcess.on('close', (code) => {
-    console.log(`[MAIN] Python telemetry engine exited with code ${code}`);
+    console.log(`[MAIN] Python engine exited (code ${code})`);
+    daemonReady = false;
+  });
+  pythonDaemonProcess.on('error', (err) => {
+    console.error('[MAIN] Failed to start Python engine:', err.message);
   });
 }
 
-/**
- * Terminates the supervised Python daemon cleanly on application quit.
- */
+// ---- Stop the Python daemon cleanly ----
 function stopPythonDaemon() {
   if (pythonDaemonProcess) {
-    console.log('[MAIN] Stopping Python telemetry engine...');
+    console.log('[MAIN] Stopping Python engine...');
     pythonDaemonProcess.kill('SIGTERM');
     pythonDaemonProcess = null;
   }
 }
 
-/**
- * Creates the primary desktop browser window with security hardening.
- */
+// ---- Create the main frameless BrowserWindow ----
 function createWindow() {
-  console.log('[MAIN] Creating primary frameless desktop window...');
-  // Configure Content-Security-Policy header rules on the default session.
+  // Configure strict Content-Security-Policy for all responses loaded in this session.
   session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
     callback({
       responseHeaders: {
         ...details.responseHeaders,
         'Content-Security-Policy': [
-          "default-src 'self'; script-src 'self' 'unsafe-inline'; connect-src 'self' ws://127.0.0.1:* http://127.0.0.1:* ws://localhost:* http://localhost:*; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:;"
+          "default-src 'self';" +
+          " script-src 'self' 'unsafe-inline';" +
+          " connect-src 'self' ws://127.0.0.1:* http://127.0.0.1:* ws://localhost:* http://localhost:*;" +
+          " style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;" +
+          " font-src 'self' https://fonts.gstatic.com data:;" +
+          " img-src 'self' data: https:;"
         ]
       }
     });
   });
 
-  // Create BrowserWindow instance with customized window dimensions and framing.
   mainWindow = new BrowserWindow({
-    width: 1280,
-    height: 840,
-    minWidth: 1024,
-    minHeight: 700,
-    frame: false, // Frameless design to allow custom cyber titlebar
-    backgroundColor: '#090d16',
-    show: false, // Hidden until ready-to-show to prevent white flash
+    width:           1280,
+    height:          840,
+    minWidth:        1000,
+    minHeight:       650,
+    frame:           false,       // Custom frameless title bar
+    backgroundColor: '#06090e',   // Prevents white flash before paint
+    show:            false,       // Show only once content is ready
     webPreferences: {
-      preload: path.join(__dirname, 'preload.cjs'),
-      contextIsolation: true, // Hard isolation between preload and renderer JS
-      nodeIntegration: false, // Prevent renderer access to Node built-ins
-      sandbox: true // Chromium sandbox enforcement
+      preload:          path.join(__dirname, 'preload.cjs'),
+      contextIsolation: true,     // Renderer cannot access Node globals
+      nodeIntegration: false,     // Renderer cannot require() Node modules
+      sandbox: true               // Renderer runs in a Chromium sandbox
     }
   });
 
-  // Load either Vite development server URL or built static HTML bundle.
+  // Load the built React bundle or dev server depending on mode.
   if (isDev) {
+    console.log('[MAIN] Dev mode: loading http://localhost:5173');
     mainWindow.loadURL('http://localhost:5173');
+    mainWindow.webContents.openDevTools(); // open devtools in dev mode
   } else {
-    mainWindow.loadFile(path.join(__dirname, '..', 'dist', 'index.html'));
+    const indexPath = path.join(ROOT_DIR, 'dist', 'index.html');
+    console.log('[MAIN] Production mode: loading', indexPath);
+    mainWindow.loadFile(indexPath);
   }
 
-  // Display window smoothly once layout is primed.
+  // Show the window after the first paint to avoid a blank flash.
   mainWindow.once('ready-to-show', () => {
     mainWindow.show();
+    console.log('[MAIN] Window is visible.');
   });
 
-  // Intercept and block unauthorized new window popups.
+  // Block all external popup navigations.
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-    if (url.startsWith('https://')) {
-      shell.openExternal(url);
-    }
+    if (url.startsWith('https://')) shell.openExternal(url);
     return { action: 'deny' };
   });
 
-  // Intercept and block unauthorized top-level navigations.
-  mainWindow.webContents.on('will-navigate', (event, navigationUrl) => {
-    const parsedUrl = new URL(navigationUrl);
-    if (parsedUrl.origin !== 'http://localhost:5173' && parsedUrl.protocol !== 'file:') {
+  // Block navigation away from our local origin.
+  mainWindow.webContents.on('will-navigate', (event, navUrl) => {
+    try {
+      const parsed = new URL(navUrl);
+      // Allow file:// (production dist) and http://localhost or http://127.0.0.1 (dev server).
+      // Block everything else to prevent open-redirect attacks.
+      const isFile  = parsed.protocol === 'file:';
+      const isLocal = parsed.protocol === 'http:' &&
+                      (parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1');
+      if (!isFile && !isLocal) event.preventDefault();
+    } catch (_) {
       event.preventDefault();
     }
   });
 
-  // Dereference window object when closed.
-  mainWindow.on('closed', () => {
-    mainWindow = null;
-  });
+  mainWindow.on('closed', () => { mainWindow = null; });
 }
 
-/**
- * Initializes the native system tray icon and context menu.
- */
+// ---- Create system tray ----
 function createTray() {
-  // Use a fallback or create tray context menu.
   try {
+    // Build a minimal context menu without requiring a PNG asset.
     const contextMenu = Menu.buildFromTemplate([
-      {
-        label: 'NetWhisper Monitor',
-        enabled: false
-      },
+      { label: 'NetWhisper', enabled: false },
       { type: 'separator' },
       {
         label: 'Show Dashboard',
-        click: () => {
-          if (mainWindow) {
-            mainWindow.show();
-            mainWindow.focus();
-          }
-        }
+        click: () => { if (mainWindow) { mainWindow.show(); mainWindow.focus(); } }
       },
       {
         label: 'Minimize to Tray',
-        click: () => {
-          if (mainWindow) {
-            mainWindow.hide();
-          }
-        }
+        click: () => { if (mainWindow) mainWindow.hide(); }
       },
       { type: 'separator' },
-      {
-        label: 'Quit NetWhisper',
-        click: () => {
-          app.quit();
-        }
-      }
+      { label: 'Quit', click: () => app.quit() }
     ]);
 
-    // Note: If an icon file is present, tray can be initialized.
-    // In headless or test setups without X display icon assets, catch cleanly.
+    // Tray icons require a PNG file; use a 1×1 transparent PNG as a fallback
+    // if no icon asset is bundled yet so the app still works.
+    const iconPath = path.join(ROOT_DIR, 'src', 'icon.png');
+    if (fs.existsSync(iconPath)) {
+      tray = new Tray(iconPath);
+      tray.setToolTip('NetWhisper Network Monitor');
+      tray.setContextMenu(contextMenu);
+      tray.on('double-click', () => { if (mainWindow) mainWindow.show(); });
+    }
   } catch (err) {
-    console.log('[TRAY] System tray initialization deferred.');
+    console.log('[TRAY] Tray init skipped:', err.message);
   }
 }
 
-// Register IPC handlers for desktop titlebar actions.
-ipcMain.on('window:minimize', () => {
-  if (mainWindow) mainWindow.minimize();
-});
-
+// ---- IPC: window controls ----
+ipcMain.on('window:minimize', () => { if (mainWindow) mainWindow.minimize(); });
 ipcMain.on('window:maximize', () => {
-  if (mainWindow) {
-    if (mainWindow.isMaximized()) {
-      mainWindow.unmaximize();
-    } else {
-      mainWindow.maximize();
-    }
-  }
+  if (!mainWindow) return;
+  mainWindow.isMaximized() ? mainWindow.unmaximize() : mainWindow.maximize();
 });
+ipcMain.on('window:close', () => { if (mainWindow) mainWindow.close(); });
 
-ipcMain.on('window:close', () => {
-  if (mainWindow) mainWindow.close();
-});
-
-// Register IPC handler for native log export.
-ipcMain.handle('export:logs', async (event, jsonData) => {
+// ---- IPC: export telemetry log to disk ----
+ipcMain.handle('export:logs', async (_event, jsonData) => {
   if (!mainWindow) return { success: false, error: 'No active window' };
   const { filePath } = await dialog.showSaveDialog(mainWindow, {
-    title: 'Export NetWhisper Telemetry Log',
-    defaultPath: `netwhisper-telemetry-${Date.now()}.json`,
-    filters: [{ name: 'JSON Files', extensions: ['json'] }]
+    title:       'Export NetWhisper Log',
+    defaultPath: `netwhisper-${Date.now()}.json`,
+    filters:     [{ name: 'JSON', extensions: ['json'] }]
   });
-
   if (filePath) {
-    require('fs').writeFileSync(filePath, JSON.stringify(jsonData, null, 2), 'utf8');
+    fs.writeFileSync(filePath, JSON.stringify(jsonData, null, 2), 'utf8');
     return { success: true, filePath };
   }
   return { success: false, cancelled: true };
 });
 
-// Register IPC handler for native notifications.
-ipcMain.on('notify:alert', (event, { title, message }) => {
+// ---- IPC: desktop notification ----
+ipcMain.on('notify:alert', (_event, { title, message }) => {
   if (Notification.isSupported()) {
     new Notification({
-      title: title || 'NetWhisper Privacy Alert',
-      body: message || 'High-risk background network activity detected.',
-      silent: false
+      title: title || 'NetWhisper Alert',
+      body:  message || 'High-risk background network activity detected.'
     }).show();
   }
 });
 
-// Register IPC handler for opening external URLs safely.
-ipcMain.handle('open:external', async (event, url) => {
+// ---- IPC: safe external URL opener ----
+ipcMain.handle('open:external', async (_event, url) => {
   if (typeof url === 'string' && url.startsWith('https://')) {
     await shell.openExternal(url);
     return { success: true };
@@ -233,26 +250,29 @@ ipcMain.handle('open:external', async (event, url) => {
   return { success: false, error: 'Blocked non-https URL' };
 });
 
-// App lifecycle: Ready event.
+// ---- App lifecycle ----
 app.whenReady().then(() => {
+  // 1. Start the Python backend daemon.
   startPythonDaemon();
-  createWindow();
-  createTray();
+
+  // 2. Wait up to 8 seconds for the daemon to accept connections, then open the window.
+  waitForDaemon('127.0.0.1', 8765, 8000, (err) => {
+    if (err) {
+      console.warn('[MAIN] Daemon did not respond in time; opening window anyway.');
+    } else {
+      console.log('[MAIN] Daemon is ready on port 8765.');
+      daemonReady = true;
+    }
+    createWindow();
+    createTray();
+  });
 
   app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) {
-      createWindow();
-    }
+    if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });
 });
 
-// App lifecycle: Clean shutdown.
-app.on('will-quit', () => {
-  stopPythonDaemon();
-});
-
+app.on('will-quit', stopPythonDaemon);
 app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
-    app.quit();
-  }
+  if (process.platform !== 'darwin') app.quit();
 });

@@ -55,6 +55,48 @@
   --font-mono: 'JetBrains Mono', monospace;
 }
 
+/* Light Mode Theme Overrides — applied when data-theme="light" is set on <html> */
+[data-theme="light"] {
+  /* Light background palette — cool off-white with slight blue tint */
+  --bg-primary:    #f0f4f8;
+  --bg-secondary:  #e4eaf2;
+  --bg-tertiary:   #d8e0ec;
+  --bg-card:       rgba(255, 255, 255, 0.85);
+  --bg-card-hover: rgba(255, 255, 255, 0.95);
+  --bg-glass:      rgba(240, 244, 248, 0.80);
+
+  /* Borders — visible but subtle on light backgrounds */
+  --border-subtle: rgba(0, 0, 0, 0.10);
+  --border-active: rgba(0, 180, 120, 0.50);
+  --border-danger: rgba(200, 50, 50, 0.45);
+
+  /* Typography — dark on light */
+  --text-primary:   #0f172a;
+  --text-secondary: #334155;
+  --text-muted:     #64748b;
+  --text-inverse:   #f8fafc;
+
+  /* Accent colors stay vibrant but slightly deepened for contrast on white */
+  --accent-cyan:   #0099cc;
+  --accent-green:  #00b377;
+  --accent-amber:  #d97706;
+  --accent-red:    #dc2626;
+  --accent-blue:   #2563eb;
+  --accent-purple: #7c3aed;
+
+  /* Risk levels */
+  --risk-low:      #059669;
+  --risk-medium:   #d97706;
+  --risk-high:     #ea580c;
+  --risk-critical: #dc2626;
+
+  /* Shadows — softer on light backgrounds */
+  --shadow-sm:          0 2px 8px rgba(0, 0, 0, 0.10);
+  --shadow-md:          0 8px 24px rgba(0, 0, 0, 0.14);
+  --shadow-glow:        0 0 20px rgba(0, 180, 120, 0.12);
+  --shadow-danger-glow: 0 0 20px rgba(220, 38, 38, 0.15);
+}
+
 /* Global Reset and Box Sizing */
 *, *::before, *::after {
   box-sizing: border-box;

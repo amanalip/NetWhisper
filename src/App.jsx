@@ -52,6 +52,14 @@ export default function App() {
   // Toast Notification HUD state.
   const [toasts, setToasts] = useState([]);
 
+  // Theme state: true = dark mode (default), false = light mode.
+  // Persisted to localStorage so the preference survives app restarts.
+  const [isDark, setIsDark] = useState(() => {
+    const saved = typeof localStorage !== 'undefined' ? localStorage.getItem('netwhisper-theme') : null;
+    // Default to dark if no saved preference exists.
+    return saved !== 'light';
+  });
+
   // Active view tab state.
   const [activeTab, setActiveTab] = useState('processes'); // 'processes', 'domains', 'heatmap', 'waterfall'
 
@@ -71,6 +79,27 @@ export default function App() {
 
   // WebSocket reference.
   const wsRef = useRef(null);
+
+  // Apply theme to the <html> element whenever isDark changes.
+  // The CSS [data-theme="light"] selector drives the full color swap.
+  useEffect(() => {
+    const root = document.documentElement;
+    if (isDark) {
+      root.removeAttribute('data-theme'); // dark is the default — no attribute needed
+    } else {
+      root.setAttribute('data-theme', 'light');
+    }
+  }, [isDark]);
+
+  // Toggle between dark and light theme and save the preference.
+  const handleToggleTheme = () => {
+    setIsDark((prev) => {
+      const next = !prev;
+      localStorage.setItem('netwhisper-theme', next ? 'dark' : 'light');
+      return next;
+    });
+  };
+
 
   // Toast dispatch and eviction helper.
   const addToast = ({ type = 'info', title, message, duration = 4000 }) => {
@@ -564,7 +593,14 @@ export default function App() {
   return (
     <div className="app-container">
       {/* Custom Titlebar */}
-      <TitleBar isConnected={isConnected} mode={mode} onToggleMode={handleToggleMode} />
+      <TitleBar
+        isConnected={isConnected}
+        mode={mode}
+        onToggleMode={handleToggleMode}
+        isDark={isDark}
+        onToggleTheme={handleToggleTheme}
+      />
+
 
       {/* Main Navigation Bar */}
       <nav className="main-nav">

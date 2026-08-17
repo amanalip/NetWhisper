@@ -16,7 +16,7 @@ This file tracks the core context, key decisions, architectural trade-offs, and 
 
 ---
 
-## 2. Key Architectural Decisions
+## 2. Key Architectural Decisions and Rationales
 
 ### Packaging Choice: Pure Electron Desktop App
 - **Options Evaluated**:
@@ -26,8 +26,18 @@ This file tracks the core context, key decisions, architectural trade-offs, and 
 - **Selected Decision**: Pure Electron Desktop App.
 - **Rationale**: Provides native OS window control, system tray presence, desktop notification dispatch for high-risk background beaconing, and direct process lifecycle management.
 
+### Socket Inspection Strategy: ProcFS + `ss` Fallback vs eBPF
+- **Evaluated Alternatives**: eBPF (tc/kprobes) vs ProcFS (`/proc/net/*`, `/proc/[pid]/fd`) with `ss` fallback.
+- **Decision**: ProcFS + `ss` fallback.
+- **Rationale**: While eBPF offers high precision, it requires root permissions (`CAP_SYS_ADMIN` or `CAP_BPF`), specific kernel headers, and kernel versions >= 5.8. ProcFS and `ss` work out of the box for standard desktop users on any Linux distribution without elevated privileges or specialized toolchains.
+
+### Heatmap Visualization: HTML5 Canvas vs SVG/DOM
+- **Evaluated Alternatives**: SVG elements, standard DOM divs, HTML5 Canvas.
+- **Decision**: HTML5 Canvas API.
+- **Rationale**: High-throughput 10Hz socket telemetry updates generate hundreds of data points per second. Rendering these in the DOM causes layout thrashing and garbage collection pauses. Canvas renders directly to the GPU buffer at a smooth 60 FPS.
+
 ### Telemetry and Kernel Inspection Architecture
-- **Decision**: Python backend (FastAPI / Uvicorn) combined with Linux procfs (`/proc/net/tcp`, `/proc/net/udp`, `/proc/[pid]/fd`) and `ss` tools, paired with a React and Vite frontend.
+- **Decision**: Python backend (FastAPI / Uvicorn) combined with Linux procfs and `ss` tools, paired with a React and Vite frontend.
 - **Dual Mode Design**:
   1. *Live Linux Kernel Mode*: Correlates real local sockets to active OS processes via socket inodes.
   2. *Scenario Simulation Mode*: Simulates rich network activity (background telemetry, CLI beacons, tracker endpoints) to test features and UI responses without requiring root permissions.

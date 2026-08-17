@@ -1,0 +1,15 @@
+# Node dependencies and build artifacts
+node_modules/
+dist/
+dist-electron/
+
+# Python virtualenv and cache files
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Logs and environment files
+*.log
+.env
+.DS_Store

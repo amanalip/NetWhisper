@@ -1,0 +1,35 @@
+{
+  "name": "netwhisper",
+  "version": "1.0.0",
+  "description": "Interactive Real-Time Privacy and Network Monitor for Desktop Apps and CLI Tools",
+  "main": "electron/main.cjs",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "electron": "electron .",
+    "test:security": ".venv/bin/pytest tests/ -v",
+    "test:electron": "node tests/test_electron_security.test.cjs",
+    "test": "npm run test:security && npm run test:electron"
+  },
+  "dependencies": {
+    "lucide-react": "^1.16.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.4",
+    "electron": "^33.2.1",
+    "vite": "^6.0.7"
+  },
+  "keywords": [
+    "network-monitor",
+    "privacy",
+    "telemetry-watcher",
+    "electron",
+    "security"
+  ],
+  "author": "NetWhisper Team",
+  "license": "GPL-3.0"
+}

@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <!-- Specify character encoding -->
+    <meta charset="UTF-8" />
+    <!-- Ensure responsive viewport scaling -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- Content Security Policy meta tag for browser preview mode -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; connect-src 'self' ws://127.0.0.1:* http://127.0.0.1:* ws://localhost:* http://localhost:*; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:;" />
+    <!-- Application Title -->
+    <title>NetWhisper - Network and Privacy Monitor</title>
+    <!-- Load Google Fonts for clean cybersecurity typography -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  </head>
+  <body>
+    <!-- React root mounting container -->
+    <div id="root"></div>
+    <!-- Load main React entrypoint script -->
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>

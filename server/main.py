@@ -54,8 +54,8 @@ privacy_analyzer = PrivacyAnalyzer()
 sandbox_manager = SandboxManager(self_pid=os.getpid())
 scenario_generator = ScenarioGenerator()
 
-# Global state tracking the active engine mode (defaults to simulation for immediate rich visualization).
-current_mode: str = "simulation"
+# Global state tracking the active engine mode (defaults to LIVE Linux kernel monitoring).
+current_mode: str = "live"
 # Sliding window history of recent network events and sandbox interventions.
 event_history: List[Dict] = []
 # Maximum number of event entries to retain in memory.

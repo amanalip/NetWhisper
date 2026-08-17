@@ -22,213 +22,31 @@ import PacketHeatmap from './components/PacketHeatmap';
 import NetworkWaterfall from './components/NetworkWaterfall';
 import ProcessDetailModal from './components/ProcessDetailModal';
 
-// Initial default process dataset for instant initial render.
-const DEFAULT_PROCESSES = [
-  {
-    pid: 4182,
-    ppid: 1205,
-    name: 'code-telemetry',
-    cmdline: '/usr/share/code/code --type=crash-reporter --telemetry-endpoint=https://telemetry.remote.visualstudio.com',
-    category: 'developer_tool',
-    cpu_percent: 1.4,
-    memory_mb: 184.2,
-    username: 'user',
-    risk_level: 'high',
-    is_isolated: false,
-    sockets: [
-      {
-        inode: 104201,
-        proto: 'TCP',
-        local_ip: '192.168.1.42',
-        local_port: 51240,
-        remote_ip: '13.107.42.16',
-        remote_port: 443,
-        remote_domain: 'telemetry.remote.visualstudio.com',
-        state: 'ESTABLISHED',
-        category: 'Telemetry & Analytics',
-        risk: 'high',
-        bytes_sent: 14200,
-        bytes_recv: 2048,
-        bandwidth_out_bps: 12400,
-        bandwidth_in_bps: 2048,
-        is_encrypted: true
-      },
-      {
-        inode: 104202,
-        proto: 'TCP',
-        local_ip: '192.168.1.42',
-        local_port: 51242,
-        remote_ip: '20.189.173.1',
-        remote_port: 443,
-        remote_domain: 'browser.pipe.aria.microsoft.com',
-        state: 'ESTABLISHED',
-        category: 'Telemetry & Analytics',
-        risk: 'high',
-        bytes_sent: 8450,
-        bytes_recv: 1024,
-        bandwidth_out_bps: 6800,
-        bandwidth_in_bps: 1024,
-        is_encrypted: true
-      }
-    ]
-  },
-  {
-    pid: 5891,
-    ppid: 3410,
-    name: 'npm-cli-daemon',
-    cmdline: 'node /usr/local/bin/npm fund --analytics=true --token=[REDACTED_TOKEN]',
-    category: 'cli_tool',
-    cpu_percent: 0.8,
-    memory_mb: 94.6,
-    username: 'user',
-    risk_level: 'high',
-    is_isolated: false,
-    sockets: [
-      {
-        inode: 105891,
-        proto: 'TCP',
-        local_ip: '192.168.1.42',
-        local_port: 48210,
-        remote_ip: '104.16.27.35',
-        remote_port: 443,
-        remote_domain: 'registry.npmjs.org',
-        state: 'ESTABLISHED',
-        category: 'Cloud Infrastructure',
-        risk: 'low',
-        bytes_sent: 24500,
-        bytes_recv: 128400,
-        bandwidth_out_bps: 4096,
-        bandwidth_in_bps: 32768,
-        is_encrypted: true
-      },
-      {
-        inode: 105892,
-        proto: 'TCP',
-        local_ip: '192.168.1.42',
-        local_port: 48212,
-        remote_ip: '151.101.65.140',
-        remote_port: 80,
-        remote_domain: 'telemetry.npmjs.com',
-        state: 'ESTABLISHED',
-        category: 'Unencrypted Web (HTTP)',
-        risk: 'high',
-        bytes_sent: 5120,
-        bytes_recv: 512,
-        bandwidth_out_bps: 5120,
-        bandwidth_in_bps: 512,
-        is_encrypted: false
-      }
-    ]
-  },
-  {
-    pid: 7240,
-    ppid: 1400,
-    name: 'spotify-client',
-    cmdline: '/usr/bin/spotify --enable-crash-dump',
-    category: 'desktop_app',
-    cpu_percent: 3.4,
-    memory_mb: 312.0,
-    username: 'user',
-    risk_level: 'medium',
-    is_isolated: false,
-    sockets: [
-      {
-        inode: 107241,
-        proto: 'TCP',
-        local_ip: '192.168.1.42',
-        local_port: 53210,
-        remote_ip: '35.186.224.25',
-        remote_port: 443,
-        remote_domain: 'audio-ak.spotify.com.edgesuite.net',
-        state: 'ESTABLISHED',
-        category: 'Cloud Infrastructure',
-        risk: 'low',
-        bytes_sent: 12000,
-        bytes_recv: 524000,
-        bandwidth_out_bps: 2048,
-        bandwidth_in_bps: 65536,
-        is_encrypted: true
-      }
-    ]
-  },
-  {
-    pid: 9811,
-    ppid: 1,
-    name: 'stealth_updater',
-    cmdline: '/tmp/.cache/stealth_updater --beacon --interval=5s',
-    category: 'background_daemon',
-    cpu_percent: 4.1,
-    memory_mb: 45.2,
-    username: 'user',
-    risk_level: 'critical',
-    is_isolated: false,
-    sockets: [
-      {
-        inode: 109811,
-        proto: 'TCP',
-        local_ip: '192.168.1.42',
-        local_port: 41209,
-        remote_ip: '185.220.101.5',
-        remote_port: 4444,
-        remote_domain: '185.220.101.5',
-        state: 'ESTABLISHED',
-        category: 'Direct IP (Non-standard Port)',
-        risk: 'high',
-        bytes_sent: 32800,
-        bytes_recv: 4096,
-        bandwidth_out_bps: 16384,
-        bandwidth_in_bps: 2048,
-        is_encrypted: false
-      }
-    ]
-  }
-];
-
-const DEFAULT_DOMAINS = [
-  { domain: 'telemetry.remote.visualstudio.com', category: 'Telemetry & Analytics', risk: 'high', socket_count: 1, processes: ['code-telemetry'] },
-  { domain: 'browser.pipe.aria.microsoft.com', category: 'Telemetry & Analytics', risk: 'high', socket_count: 1, processes: ['code-telemetry'] },
-  { domain: 'telemetry.npmjs.com', category: 'Unencrypted Web (HTTP)', risk: 'high', socket_count: 1, processes: ['npm-cli-daemon'] },
-  { domain: 'registry.npmjs.org', category: 'Cloud Infrastructure', risk: 'low', socket_count: 1, processes: ['npm-cli-daemon'] },
-  { domain: 'audio-ak.spotify.com.edgesuite.net', category: 'Cloud Infrastructure', risk: 'low', socket_count: 1, processes: ['spotify-client'] },
-  { domain: '185.220.101.5', category: 'Direct IP (Non-standard Port)', risk: 'high', socket_count: 1, processes: ['stealth_updater'] }
-];
-
-const DEFAULT_CATEGORIES = {
-  'Telemetry & Analytics': 2,
-  'Cloud Infrastructure': 2,
-  'Unencrypted Web (HTTP)': 1,
-  'Direct IP (Non-standard Port)': 1
-};
-
 /**
  * App Root Component for NetWhisper.
  * Manages WebSocket telemetry subscription, state aggregation, tab navigation, and action handlers.
  */
 export default function App() {
   // Connection state boolean.
-  const [isConnected, setIsConnected] = useState(true);
-  // Active engine mode ('simulation' or 'live').
-  const [mode, setMode] = useState('simulation');
+  const [isConnected, setIsConnected] = useState(false);
+  // Active engine mode defaults to 'live' Linux monitoring.
+  const [mode, setMode] = useState('live');
   // Summary KPI metrics object.
   const [summary, setSummary] = useState({
-    total_processes: DEFAULT_PROCESSES.length,
-    active_sockets: 6,
-    bandwidth_in_bps: 104856,
-    bandwidth_out_bps: 46848,
-    high_risk_count: 4,
+    total_processes: 0,
+    active_sockets: 0,
+    bandwidth_in_bps: 0,
+    bandwidth_out_bps: 0,
+    high_risk_count: 0,
     panic_mode: false,
     isolated_pids_count: 0
   });
 
-  // Telemetry lists initialized with defaults.
-  const [processes, setProcesses] = useState(DEFAULT_PROCESSES);
-  const [domains, setDomains] = useState(DEFAULT_DOMAINS);
-  const [categories, setCategories] = useState(DEFAULT_CATEGORIES);
-  const [events, setEvents] = useState([
-    { id: 1, timestamp: '02:00:15', type: 'detect', title: 'Background telemetry detected from code-telemetry (PID 4182)', details: {} },
-    { id: 2, timestamp: '02:00:22', type: 'detect', title: 'Unencrypted outbound beacon to telemetry.npmjs.com (PID 5891)', details: {} },
-    { id: 3, timestamp: '02:00:30', type: 'alert', title: 'Non-standard port 4444 connection from stealth_updater (PID 9811)', details: {} }
-  ]);
+  // Telemetry lists reflecting live host system sockets.
+  const [processes, setProcesses] = useState([]);
+  const [domains, setDomains] = useState([]);
+  const [categories, setCategories] = useState({});
+  const [events, setEvents] = useState([]);
 
   // Active view tab state.
   const [activeTab, setActiveTab] = useState('processes'); // 'processes', 'domains', 'heatmap', 'waterfall'
@@ -258,7 +76,7 @@ export default function App() {
         setIsConnected(true);
       }
     } catch (err) {
-      console.log('[API] Initial snapshot fetch waiting for engine startup...');
+      console.log('[API] Waiting for live engine startup...');
     }
   };
 
@@ -327,7 +145,7 @@ export default function App() {
         }
       }
     } catch (err) {
-      console.log('[API] Daemon not reachable yet for event fetch.');
+      console.log('[API] Daemon event history fetch error.');
     }
   };
 

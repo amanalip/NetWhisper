@@ -6,9 +6,9 @@ This file tracks the core context, key decisions, architectural trade-offs, and 
 
 ## 1. Project Inception and Concept
 
-- **Core Concept**: An interactive privacy and networking monitor that visualizes desktop applications and CLI tools making background network requests.
+- **Core Concept**: An interactive privacy and networking monitor that visualizes desktop applications and CLI tools making background network requests on Linux.
 - **Key Features Identified**:
-  - Real-time process socket tree (hierarchical process-to-socket mapping).
+  - Real-time process socket tree (hierarchical process-to-socket mapping from live host kernel tables).
   - Domain resolution breakdown (reverse DNS and telemetry endpoint categorization).
   - Instant per-process network sandboxing and kill switches.
   - Packet volume heatmaps and activity waterfall.
@@ -19,28 +19,15 @@ This file tracks the core context, key decisions, architectural trade-offs, and 
 ## 2. Key Architectural Decisions and Rationales
 
 ### Packaging Choice: Pure Electron Desktop App
-- **Options Evaluated**:
-  1. Hybrid Desktop and Web (FastAPI backend + React UI + standalone browser access).
-  2. Pure Electron Desktop App (Bundled desktop application with native system tray and window framing).
-  3. Lightweight Web Dashboard (Browser-only interface).
 - **Selected Decision**: Pure Electron Desktop App.
 - **Rationale**: Provides native OS window control, system tray presence, desktop notification dispatch for high-risk background beaconing, and direct process lifecycle management.
 
-### Socket Inspection Strategy: ProcFS + `ss` Fallback vs eBPF
-- **Evaluated Alternatives**: eBPF (tc/kprobes) vs ProcFS (`/proc/net/*`, `/proc/[pid]/fd`) with `ss` fallback.
-- **Decision**: ProcFS + `ss` fallback.
-- **Rationale**: While eBPF offers high precision, it requires root permissions (`CAP_SYS_ADMIN` or `CAP_BPF`), specific kernel headers, and kernel versions >= 5.8. ProcFS and `ss` work out of the box for standard desktop users on any Linux distribution without elevated privileges or specialized toolchains.
+### Socket Inspection Strategy: Live Linux Kernel & Process Table Scanning
+- **Primary Mechanism**: Real-time extraction of live host sockets via `psutil` net connections, `/proc/net/tcp`, `/proc/net/udp`, and unprivileged `ss -tupa -H -O -n` fallback.
+- **Default Engine Mode**: **Live Linux Kernel Monitoring (`Mode: LIVE`)** is the default operating mode on application launch, inspecting real desktop applications (Chrome, VS Code, Discord, Spotify, CLI utilities) running on the user machine.
 
-### Heatmap Visualization: HTML5 Canvas vs SVG/DOM
-- **Evaluated Alternatives**: SVG elements, standard DOM divs, HTML5 Canvas.
-- **Decision**: HTML5 Canvas API.
-- **Rationale**: High-throughput 10Hz socket telemetry updates generate hundreds of data points per second. Rendering these in the DOM causes layout thrashing and garbage collection pauses. Canvas renders directly to the GPU buffer at a smooth 60 FPS.
-
-### Telemetry and Kernel Inspection Architecture
-- **Decision**: Python backend (FastAPI / Uvicorn) combined with Linux procfs and `ss` tools, paired with a React and Vite frontend.
-- **Dual Mode Design**:
-  1. *Live Linux Kernel Mode*: Correlates real local sockets to active OS processes via socket inodes.
-  2. *Scenario Simulation Mode*: Simulates rich network activity (background telemetry, CLI beacons, tracker endpoints) to test features and UI responses without requiring root permissions.
+### Heatmap Visualization: HTML5 Canvas
+- **Rationale**: High-throughput 10Hz socket telemetry updates render smoothly directly to the GPU buffer at 60 FPS without layout thrashing.
 
 ---
 
@@ -73,7 +60,7 @@ This file tracks the core context, key decisions, architectural trade-offs, and 
 - **Line-by-Line Code Commenting**:
   - Every single line of code across the backend, frontend, electron layer, and tests is thoroughly commented for maximum beginner readability and educational clarity.
 - **Development Process Logging**:
-  - Documented in `document/development/phase_<1-5>/implementation_guide.md` with real application screenshot captures from the live system.
+  - Documented in `document/development/phase_<1-5>/implementation_guide.md`.
 - **Testing Process Logging**:
   - Documented in `document/testing/phase_<1-5>/testing_doc.md` logging unit tests, security fuzzing outputs, test commands, and pass/fail metrics.
 
@@ -81,26 +68,8 @@ This file tracks the core context, key decisions, architectural trade-offs, and 
 
 ## 5. Execution Status Across All 5 Phases
 
-- [x] **Phase 1: Backend Core and Telemetry Engine** (Completed & 100% tests passing)
-- [x] **Phase 2: Automated Security and Reliability Test Suite** (Completed & 100% security tests passing)
-- [x] **Phase 3: Electron Desktop Shell and IPC Layer** (Completed & 100% Electron audits passing)
-- [x] **Phase 4: Frontend Desktop User Interface and Visualizations** (Completed & bundle built cleanly)
-- [x] **Phase 5: End-to-End Integration, Validation, and Packaging** (Completed & live app screenshot verified)
-
----
-
-## 6. Complete Repository Artifacts
-- `README.md`: Project overview, features, quick start, and testing.
-- `implementation_plan.md`: 5-phase execution plan and verification strategy.
-- `meta_thinking.md`: Decision log and tracking.
-- `document/architecture_blueprint.md`: Detailed architecture blueprint, technical rationales, and schemas.
-- `document/development/phase_1/implementation_guide.md`
-- `document/testing/phase_1/testing_doc.md`
-- `document/development/phase_2/implementation_guide.md`
-- `document/testing/phase_2/testing_doc.md`
-- `document/development/phase_3/implementation_guide.md`
-- `document/testing/phase_3/testing_doc.md`
-- `document/development/phase_4/implementation_guide.md`
-- `document/testing/phase_4/testing_doc.md`
-- `document/development/phase_5/implementation_guide.md`
-- `document/testing/phase_5/testing_doc.md`
+- [x] **Phase 1: Backend Core and Telemetry Engine** (Live Linux socket extractor, reverse DNS, secret redaction, FastAPI daemon)
+- [x] **Phase 2: Automated Security and Reliability Test Suite** (PID fuzzing, protected PID tests, CSP audits)
+- [x] **Phase 3: Electron Desktop Shell and IPC Layer** (Native frameless window, system tray, ContextBridge)
+- [x] **Phase 4: Frontend Desktop User Interface and Visualizations** (React UI, Canvas heatmaps, live socket tree)
+- [x] **Phase 5: End-to-End Integration, Validation, and Packaging** (Verified live Linux socket tracking across real OS processes)

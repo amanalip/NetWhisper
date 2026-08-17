@@ -1,3 +1,5 @@
+> **Note: This is a test experiment with Antigravity.**
+
 # NetWhisper
 
 > Real-Time Network and Privacy Monitor for Linux Desktop Apps, Browsers, and CLI Tools

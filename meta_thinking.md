@@ -73,11 +73,37 @@ This file tracks the core context, key decisions, architectural trade-offs, and 
 
 ---
 
-## 5. Execution Roadmap
+## 5. Execution Roadmap: 5-Phase Implementation Strategy
 
-1. [x] Documentation and Architecture Blueprint (`README.md`, `document/architecture_blueprint.md`, `meta_thinking.md`).
-2. [ ] Backend Engine (`server/main.py`, `socket_engine.py`, `privacy_analyzer.py`, `sandbox_manager.py`, `scenario_generator.py`).
-3. [ ] Security Test Suites (`tests/test_security.py`, `tests/test_electron_security.test.js`).
-4. [ ] Electron Layer (`electron/main.cjs`, `electron/preload.cjs`).
-5. [ ] Frontend Desktop UI (`src/components/`, `index.css`, Canvas Heatmap, Socket Tree).
-6. [ ] Verification and End-to-End Validation.
+1. **Phase 1: Backend Core and Telemetry Engine**
+   - Socket collector (`/proc/net/*`, `/proc/[pid]/fd`, `ss` fallback).
+   - Privacy analyzer, reverse DNS cache, and secret redaction engine.
+   - Sandbox manager with immutable system PID protection.
+   - Scenario simulation injector for rich testing.
+   - FastAPI server with REST endpoints and 10Hz WebSocket streaming.
+
+2. **Phase 2: Automated Security and Reliability Test Suite**
+   - Backend security test suite (`tests/test_security.py`): PID fuzzing, protected PID isolation, secret scrubbing, loopback binding.
+   - Electron security audit suite (`tests/test_electron_security.test.js`): webPreferences, CSP compliance, IPC boundaries.
+
+3. **Phase 3: Electron Desktop Shell and IPC Layer**
+   - `electron/main.cjs`: Native frameless window, system tray menu, notification dispatcher, background daemon supervisor.
+   - `electron/preload.cjs`: Hardened context bridge with typed IPC APIs.
+
+4. **Phase 4: Frontend Desktop User Interface and Visualizations**
+   - Base styling (`src/index.css`) with glassmorphism dark theme.
+   - UI components (`TitleBar`, `ProcessSocketTree`, `DomainBreakdown`, `PacketHeatmap`, `NetworkWaterfall`, `ProcessDetailModal`, `GlobalControls`).
+   - React app assembly and WebSocket client integration.
+
+5. **Phase 5: End-to-End Integration, Validation, and Packaging**
+   - Live end-to-end testing across Live Kernel and Simulation modes.
+   - Verification of kill switches, bandwidth heatmaps, and background telemetry alerts.
+   - Final documentation synchronization and walkthrough.
+
+---
+
+## 6. Repository Artifacts Created
+- `README.md`: Project overview, features, and quick start.
+- `document/architecture_blueprint.md`: Detailed architecture blueprint, technical rationales, and schemas.
+- `implementation_plan.md`: 5-phase execution plan and verification strategy.
+- `meta_thinking.md`: Decision log and tracking.

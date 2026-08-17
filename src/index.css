@@ -55,46 +55,259 @@
   --font-mono: 'JetBrains Mono', monospace;
 }
 
-/* Light Mode Theme Overrides — applied when data-theme="light" is set on <html> */
+/* Light Mode Theme — data-theme="light" on <html> */
 [data-theme="light"] {
-  /* Light background palette — cool off-white with slight blue tint */
-  --bg-primary:    #f0f4f8;
-  --bg-secondary:  #e4eaf2;
-  --bg-tertiary:   #d8e0ec;
-  --bg-card:       rgba(255, 255, 255, 0.85);
-  --bg-card-hover: rgba(255, 255, 255, 0.95);
-  --bg-glass:      rgba(240, 244, 248, 0.80);
+  /* --- Background palette --- */
+  /* Main canvas: warm slate-50 with a faint blue tint, not harsh white */
+  --bg-primary:    #f1f5f9;
+  /* Section backgrounds: slightly deeper for separation */
+  --bg-secondary:  #e8eef5;
+  --bg-tertiary:   #dde5f0;
+  /* Cards: pure white with some transparency for glassmorphism effect */
+  --bg-card:       rgba(255, 255, 255, 0.92);
+  --bg-card-hover: rgba(255, 255, 255, 1);
+  /* Frosted glass surfaces (navbars, toolbars) */
+  --bg-glass:      rgba(241, 245, 249, 0.88);
 
-  /* Borders — visible but subtle on light backgrounds */
-  --border-subtle: rgba(0, 0, 0, 0.10);
-  --border-active: rgba(0, 180, 120, 0.50);
-  --border-danger: rgba(200, 50, 50, 0.45);
+  /* --- Borders --- */
+  --border-subtle: rgba(15, 23, 42, 0.10);
+  --border-active: rgba(0, 160, 110, 0.55);
+  --border-danger: rgba(185, 28, 28, 0.45);
 
-  /* Typography — dark on light */
-  --text-primary:   #0f172a;
-  --text-secondary: #334155;
-  --text-muted:     #64748b;
+  /* --- Typography --- */
+  --text-primary:   #0f172a;   /* slate-900 — strong readable dark */
+  --text-secondary: #334155;   /* slate-700 */
+  --text-muted:     #64748b;   /* slate-500 */
   --text-inverse:   #f8fafc;
 
-  /* Accent colors stay vibrant but slightly deepened for contrast on white */
-  --accent-cyan:   #0099cc;
-  --accent-green:  #00b377;
-  --accent-amber:  #d97706;
-  --accent-red:    #dc2626;
-  --accent-blue:   #2563eb;
-  --accent-purple: #7c3aed;
+  /* --- Accent colors deepened for light-bg contrast --- */
+  --accent-cyan:   #0284c7;   /* sky-600 */
+  --accent-green:  #059669;   /* emerald-600 */
+  --accent-amber:  #d97706;   /* amber-600 */
+  --accent-red:    #dc2626;   /* red-600 */
+  --accent-blue:   #2563eb;   /* blue-600 */
+  --accent-purple: #7c3aed;   /* violet-600 */
 
-  /* Risk levels */
+  /* --- Risk levels --- */
   --risk-low:      #059669;
   --risk-medium:   #d97706;
   --risk-high:     #ea580c;
   --risk-critical: #dc2626;
 
-  /* Shadows — softer on light backgrounds */
-  --shadow-sm:          0 2px 8px rgba(0, 0, 0, 0.10);
-  --shadow-md:          0 8px 24px rgba(0, 0, 0, 0.14);
-  --shadow-glow:        0 0 20px rgba(0, 180, 120, 0.12);
-  --shadow-danger-glow: 0 0 20px rgba(220, 38, 38, 0.15);
+  /* --- Shadows — crisp and soft on white backgrounds --- */
+  --shadow-sm:          0 1px 3px rgba(15, 23, 42, 0.10), 0 1px 2px rgba(15, 23, 42, 0.06);
+  --shadow-md:          0 4px 16px rgba(15, 23, 42, 0.12), 0 2px 6px rgba(15, 23, 42, 0.08);
+  --shadow-glow:        0 0 16px rgba(5, 150, 105, 0.18);
+  --shadow-danger-glow: 0 0 16px rgba(220, 38, 38, 0.20);
+}
+
+/* === Light mode structural overrides ===
+   These rules override hardcoded rgba() values that don't reference CSS variables.
+   Scoped under [data-theme="light"] for zero impact on dark mode. */
+
+/* App background — replace dark radial gradient with clean light surface */
+[data-theme="light"] .app-container {
+  background: linear-gradient(160deg, #f1f5f9 0%, #e8eef5 100%);
+}
+
+/* Titlebar stays dark (intentional "dark chrome / light content" pattern
+   used by VS Code, macOS apps, Linear etc.) — no override needed.
+   This creates a sharp, professional frame and keeps the brand feel. */
+
+/* Scrollbars */
+[data-theme="light"] ::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.06);
+}
+[data-theme="light"] ::-webkit-scrollbar-thumb {
+  background: rgba(15, 23, 42, 0.18);
+}
+[data-theme="light"] ::-webkit-scrollbar-thumb:hover {
+  background: rgba(15, 23, 42, 0.32);
+}
+
+/* KPI bar strip */
+[data-theme="light"] .kpi-bar {
+  background: rgba(255, 255, 255, 0.70);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+/* KPI icon wells */
+[data-theme="light"] .kpi-icon {
+  background: rgba(15, 23, 42, 0.06);
+}
+
+/* Filter pill base */
+[data-theme="light"] .pill-btn {
+  background: rgba(15, 23, 42, 0.04);
+}
+[data-theme="light"] .pill-btn:hover {
+  background: rgba(15, 23, 42, 0.08);
+}
+
+/* Nav tab hover / active states */
+[data-theme="light"] .nav-tab:hover {
+  background: rgba(15, 23, 42, 0.06);
+}
+[data-theme="light"] .nav-tab.active {
+  background: rgba(255, 255, 255, 0.90);
+  box-shadow: var(--shadow-sm);
+}
+
+/* Nav tab count badge */
+[data-theme="light"] .nav-tab-badge {
+  background: rgba(15, 23, 42, 0.10);
+  color: var(--text-secondary);
+}
+
+/* Search box */
+[data-theme="light"] .search-clear-btn:hover {
+  background: rgba(15, 23, 42, 0.08);
+}
+
+/* Process cards */
+[data-theme="light"] .process-card {
+  background: rgba(255, 255, 255, 0.90);
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.08);
+}
+[data-theme="light"] .process-card:hover {
+  background: rgba(255, 255, 255, 1);
+  box-shadow: 0 3px 10px rgba(15, 23, 42, 0.12);
+}
+[data-theme="light"] .process-header:hover {
+  background: rgba(15, 23, 42, 0.02);
+}
+
+/* Process metrics pills */
+[data-theme="light"] .metric-pill {
+  background: rgba(15, 23, 42, 0.06);
+  border-color: rgba(15, 23, 42, 0.10);
+}
+
+/* Action buttons (Isolate, Kill) */
+[data-theme="light"] .action-btn {
+  background: rgba(15, 23, 42, 0.05);
+  border-color: rgba(15, 23, 42, 0.12);
+  color: var(--text-secondary);
+}
+[data-theme="light"] .action-btn:hover {
+  background: rgba(15, 23, 42, 0.10);
+  color: var(--text-primary);
+}
+
+/* Socket list rows */
+[data-theme="light"] .socket-list {
+  background: rgba(15, 23, 42, 0.03);
+  border-top-color: rgba(15, 23, 42, 0.08);
+}
+[data-theme="light"] .socket-item {
+  border-bottom-color: rgba(15, 23, 42, 0.06);
+}
+[data-theme="light"] .socket-item:hover {
+  background: rgba(2, 132, 199, 0.05);
+}
+
+/* Tree header */
+[data-theme="light"] .tree-header {
+  background: rgba(255, 255, 255, 0.80);
+  border-bottom-color: var(--border-subtle);
+}
+
+/* Waterfall container */
+[data-theme="light"] .waterfall-container {
+  background: rgba(255, 255, 255, 0.90);
+  box-shadow: var(--shadow-sm);
+}
+[data-theme="light"] .waterfall-header {
+  background: rgba(241, 245, 249, 0.95);
+  border-bottom-color: var(--border-subtle);
+}
+[data-theme="light"] .event-row:hover {
+  background: rgba(15, 23, 42, 0.03);
+}
+
+/* Heatmap containers */
+[data-theme="light"] .heatmap-container {
+  background: rgba(255, 255, 255, 0.90);
+  box-shadow: var(--shadow-sm);
+}
+
+/* Modal backdrop and card */
+[data-theme="light"] .modal-backdrop {
+  background: rgba(15, 23, 42, 0.40);
+}
+[data-theme="light"] .modal-card {
+  background: #ffffff;
+  box-shadow: 0 20px 60px rgba(15, 23, 42, 0.20);
+}
+[data-theme="light"] .modal-header {
+  background: rgba(241, 245, 249, 0.95);
+  border-bottom-color: var(--border-subtle);
+}
+[data-theme="light"] .modal-footer {
+  background: rgba(241, 245, 249, 0.95);
+  border-top-color: var(--border-subtle);
+}
+
+/* Modal inner section boxes */
+[data-theme="light"] .modal-body > div {
+  background: rgba(241, 245, 249, 0.60) !important;
+  border-color: rgba(15, 23, 42, 0.10) !important;
+}
+
+/* Code / cmdline display */
+[data-theme="light"] .modal-body [style*="04070d"] {
+  background: #f8fafc !important;
+  border-color: rgba(15, 23, 42, 0.10) !important;
+}
+
+/* Draw copy buttons */
+[data-theme="light"] .drawer-copy-btn {
+  background: rgba(15, 23, 42, 0.05);
+  border-color: rgba(15, 23, 42, 0.12);
+  color: var(--text-secondary);
+}
+[data-theme="light"] .drawer-copy-btn:hover {
+  background: rgba(15, 23, 42, 0.10);
+  color: var(--text-primary);
+  border-color: rgba(15, 23, 42, 0.20);
+}
+
+/* Panic button */
+[data-theme="light"] .panic-btn {
+  border-color: rgba(220, 38, 38, 0.35);
+  background: rgba(220, 38, 38, 0.05);
+}
+
+/* Toast HUD */
+[data-theme="light"] .toast-item {
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 8px 32px rgba(15, 23, 42, 0.15), 0 0 1px rgba(15, 23, 42, 0.10);
+  border-color: rgba(15, 23, 42, 0.10);
+}
+
+/* Process category tag pills */
+[data-theme="light"] .process-category-tag {
+  background: rgba(15, 23, 42, 0.07);
+  color: var(--text-secondary);
+  border-color: rgba(15, 23, 42, 0.10);
+}
+
+/* PID badge */
+[data-theme="light"] .pid-badge {
+  background: rgba(2, 132, 199, 0.10);
+  color: var(--accent-cyan);
+  border-color: rgba(2, 132, 199, 0.20);
+}
+
+/* Domain breakdown category grid cards */
+[data-theme="light"] .domain-category-card {
+  background: rgba(255, 255, 255, 0.90);
+  box-shadow: var(--shadow-sm);
+}
+
+/* Tree count badge */
+[data-theme="light"] .tree-count-badge {
+  background: rgba(15, 23, 42, 0.06);
 }
 
 /* Global Reset and Box Sizing */

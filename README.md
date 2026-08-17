@@ -1,4 +1,4 @@
-> **Note: This is a test experiment with Antigravity.**
+> **Note: This is a test experiment with Antigravity. Buggy Code, proceed with caution.**
 
 # NetWhisper
 
